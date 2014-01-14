@@ -11,7 +11,6 @@ package average
 
 import (
   "bufio"
-//  "fmt"
   "log"
   "os"
   "strconv"

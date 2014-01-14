@@ -7,17 +7,40 @@ package main
 
 import (
   "fmt"
-  "os"
+//  "os"
+  "flag"
   "github.com/haskelladdict/lizard/average"
 )
 
 
+
+// define variable used in command line parsing
+var averageFiles bool
+var columnID int         // id of columne to act on, 0 = leftmost columns
+var numWorkers int
+
+func init() {
+  flag.BoolVar(&averageFiles, "a", false, "average columns (short)")
+  flag.BoolVar(&averageFiles, "average", false, "average columns")
+
+  flag.IntVar(&columnID, "c", 0, "column id (short)")
+  flag.IntVar(&columnID, "columnID", 0, "column id")
+
+  flag.IntVar(&numWorkers, "w", 4, "number of worker goroutines (short)")
+  flag.IntVar(&numWorkers, "workers", 4, "number of worker goroutines")
+}
+
+
 func main() {
 
-  avg := average.Average(os.Args[1:], 0, 8)
+  // parse command line flags 
+  flag.Parse()
 
-  for _, v := range avg {
-    fmt.Printf("%8.4f\n", v)
+  if averageFiles {
+    avg := average.Average(flag.Args(), columnID, numWorkers)
+    for _, v := range avg {
+      fmt.Printf("%8.4f\n", v)
+    }
   }
 }
 
