@@ -16,8 +16,6 @@ import (
 )
 
 
-
-
 // TestWmatch_1 tests the proper number of occurences of string "whale"
 func Test_Average_1(t *testing.T) {
 

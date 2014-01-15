@@ -35,6 +35,11 @@ func main() {
 
   // parse command line flags 
   flag.Parse()
+  if len(flag.Args()) == 0 {
+    flag.Usage()
+    return
+  }
+
 
   if averageFiles {
     avg := average.Average(flag.Args(), columnID, numWorkers)

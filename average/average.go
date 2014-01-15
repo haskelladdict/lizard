@@ -115,7 +115,13 @@ func (j job) run() bool {
 
 // process_column adds a column to the provided accumulator column
 func process_column(result column, acc column) column {
+
   if len(acc) != 0 {
+
+    if len(result) != len(acc) {
+      log.Panic("Mismatched column length in data files. Bailing out...")
+    }
+
     for i, v := range result {
       acc[i] += v
     }
