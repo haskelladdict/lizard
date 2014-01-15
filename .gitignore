@@ -1,5 +1,6 @@
 Makefile
 lizard
+test_data/
 
 *.swp
 

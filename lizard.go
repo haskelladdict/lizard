@@ -7,7 +7,6 @@ package main
 
 import (
   "fmt"
-//  "os"
   "flag"
   "github.com/haskelladdict/lizard/average"
 )
@@ -29,6 +28,7 @@ func init() {
   flag.IntVar(&numWorkers, "w", 4, "number of worker goroutines (short)")
   flag.IntVar(&numWorkers, "workers", 4, "number of worker goroutines")
 }
+
 
 
 func main() {
