@@ -10,7 +10,6 @@
 package average
 
 import (
-  "log"
   "math"
   "testing"
 )
@@ -18,6 +17,7 @@ import (
 
 // TestWmatch_1 tests the proper number of occurences of string "whale"
 func Test_Average_1(t *testing.T) {
+
 
   data_files_1 := []string{"test_files/test_data_1.txt"}
   result_1 := Average(data_files_1, 0, 4)
@@ -42,10 +42,7 @@ func Test_Average_1(t *testing.T) {
   expected_3 := []float64{23805.333333333333, 19121.333333333333,
     24376.0000, 12504.0000, 14620.3333333333333, 24463.6666666666666,
     24673.333333333333, 15413.0000, 10786.666666666666, 18102.6666666666666}
-  for _, i := range expected_3 {
-    log.Print(i)
-  }
-  if !float_array_equal(result_3, expected_3) { 
+  if !float_array_equal(result_3, expected_3) {
     t.Error("Parse test 3: Failed to parse input correctly")
   }
 }
