@@ -11,11 +11,11 @@ package statistic
 
 import (
   "math"
-  "log"
   "testing"
 )
 
 
+// Tests
 func Test_Average_1(t *testing.T) {
 
   data_file_1 := "test_files/test_data_1.txt"
@@ -36,17 +36,26 @@ func Test_Average_1(t *testing.T) {
 
   data_file_3 := "test_files/test_data_3.txt"
   result_3 := Statistic([]string{data_file_3}, 1, 4)
-  s1_3 := stat{data_file_3, 0.49960409553505519, 0.083340240141260666}
+  s1_3 := stat{data_file_3, 0.49905688017419975, 0.083507191091550331}
   expected_3 := []stat{s1_3}
-  log.Printf("+++ %v %v", expected_3, result_3)
   if !stat_equal(result_3, expected_3) {
     t.Error("Statistic test 3 failed")
   }
 }
 
 
-// compares the entries of a slice of stat structures returned from a 
-// call to Average with a reference slice stat structure
+// Benchmarks
+func Benchmark_Average(t *testing.B) {
+
+  data_file_3 := "test_files/test_data_3.txt"
+  Statistic([]string{data_file_3}, 1, 4)
+}
+
+
+// Support Functions
+//
+// stat_equal compares the entries of a slice of stat structures 
+// returned from a call to Average with a reference slice stat structure
 func stat_equal(s1, s2 []stat) bool {
 
   if len(s1) != len(s2) {
@@ -77,7 +86,7 @@ func stat_equal(s1, s2 []stat) bool {
 // NOTE: the floating point comparison is based on an epsilon
 //       which was chosen empirically so its not rigorous
 func float_equal(a1, a2 float64) bool {
-  epsilon := 1e-14
+  epsilon := 1e-13
   if math.Abs(a2-a1) > epsilon * math.Abs(a1) {
     return false
   }

@@ -113,18 +113,31 @@ func (j job) run() bool {
   }
   defer file.Close()
 
-  // we are using Welford's method do compute mean and variance
+  mean, variance, err := compute_mean_variance(file, j.colID)
+  if err != nil {
+    log.Printf("Warning: Failed to parse file %s. Ignoring.\n", j.fileName)
+    return false
+  }
+
+  j.results <- stat{j.fileName, mean, variance}
+  return true
+}
+
+
+
+// compute_mean_variance computes the mean and variance of column colID
+// of a plain text column oriented data file
+func compute_mean_variance(file *os.File, colID int) (float64, float64, error) {
+
   var count int
   var m_old, s_old, m, s float64
 
   scanner := bufio.NewScanner(file)
   for scanner.Scan() {
-    elems := strings.TrimSpace(strings.Fields(scanner.Text())[j.colID])
+    elems := strings.TrimSpace(strings.Fields(scanner.Text())[colID])
     col, err := strconv.ParseFloat(elems, 64)
     if err != nil {
-      log.Printf("Warning: Failed to parse file %s. Ignoring file.\n",
-        j.fileName)
-      return false
+      return 0.0, 0.0, err
     }
 
     count++
@@ -139,8 +152,7 @@ func (j job) run() bool {
     }
   }
 
-  j.results <- stat{j.fileName, m, s/float64(count-1)}
-  return true
+  return m, s/float64(count-1), nil
 }
 
 
