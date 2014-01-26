@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 //
-// Package average processes the columns of an arbitrary number of 
-// columns based text files.
+// Package statistic provides functions for computing standard
+// statistic properties (mean, std, ...) for a slice of floats
 //
-// NOTE: File processing is done via goroutines using a nummber of
-//       workers
-package average
+package statistic
 
 import (
   "bufio"
+//  "fmt"
   "log"
   "os"
   "strconv"
@@ -24,11 +23,20 @@ type column []float64
 
 
 
+// stat describes a struct containing the computed statistics
+type stat struct {
+  Name string
+  Mean float64
+  Variance float64
+}
+
+
+
 // job described the parsing work to be done by a single worker
 type job struct {
   fileName string
   colID int
-  results chan<- column
+  results chan<- stat
 }
 
 
@@ -44,7 +52,7 @@ type doneStatus struct {
 
 // add_jobs adds all parsing jobs to the work queue (one per data file)
 func add_jobs(fileNames []string, colID int, jobs chan<- job,
-  result chan<- column) {
+  result chan<- stat) {
   for _, name := range fileNames {
     jobs <- job{name, colID, result}
   }
@@ -68,9 +76,13 @@ func start_jobs(done chan<- doneStatus, jobs <-chan job) {
 
 
 
-// run_jobs does the actual processing of a single job descriptonr,
-// i.e., it parses the file and the pushes the content into
-// the results channel.
+// run_jobs does the actual processing of a single job descriptor,
+// i.e., it parses the file and computes the statistic 
+//
+// NOTE: The computation of the mean and variance uses Welford's method
+//       so we can do away with a single pass through the data.
+//       see: Donald Knuth's AOCP, Vol 2, page 232, 3rd edition
+//
 // NOTE: the column parsing code below can panic in case the user supplies
 //       an invalid column ID or the data file itself is damaged. In this
 //       case we recover and ignore the whole file.
@@ -85,29 +97,49 @@ func (j job) run() bool {
     return false
   }()
 
-  // main processing
-  file, err := os.Open(j.fileName)
-  if err != nil {
-    log.Printf("Warning: Failed to open file %s. Ignoring file.\n",
-      j.fileName)
-    return false
+  // main processing 
+  // NOTE: If filename is empty we assume stdin
+  var file *os.File
+  if j.fileName == "" {
+    file = os.Stdin
+  } else {
+    var err error
+    file, err = os.Open(j.fileName)
+    if err != nil {
+      log.Printf("Warning: Failed to open file %s. Ignoring file.\n",
+        j.fileName)
+      return false
+    }
   }
   defer file.Close()
 
+  // we are using Welford's method do compute mean and variance
+  var count int
+  var m_old, s_old, m, s float64
+
   scanner := bufio.NewScanner(file)
-  output := make([]float64,0)
   for scanner.Scan() {
-    col, err := strconv.ParseFloat(strings.Fields(scanner.Text())[j.colID], 64)
+    elems := strings.TrimSpace(strings.Fields(scanner.Text())[j.colID])
+    col, err := strconv.ParseFloat(elems, 64)
     if err != nil {
       log.Printf("Warning: Failed to parse file %s. Ignoring file.\n",
         j.fileName)
       return false
     }
 
-    output = append(output, col)
+    count++
+    if count == 1 {
+      m_old = col
+      m = col
+    } else {
+      m = m_old + (col - m_old)/float64(count)
+      s = s_old + (col - m_old)*(col - m)
+      m_old = m
+      s_old = s
+    }
   }
 
-  j.results <- output
+  j.results <- stat{j.fileName, m, s/float64(count-1)}
   return true
 }
 
@@ -136,18 +168,16 @@ func process_column(result column, acc column) column {
 
 // wait_and_process_results starts with data processing (averaging) while 
 // waiting for all workers to finish 
-func wait_and_process_results(results <-chan column, done <-chan doneStatus,
-  num_workers int) column {
+func wait_and_process_results(results <-chan stat, done <-chan doneStatus,
+  num_workers int) []stat {
 
-  var output column
-  num_cols := 0
+  output := make([]stat, 0)
 
   for w := 0; w < num_workers; {
     select {  // Blocking
     case result := <-results:
-      output = process_column(result, output)
-    case d := <-done:
-      num_cols += d.files_processed
+      output = append(output, result)
+    case <-done:
       num_workers--
     }
   }
@@ -158,15 +188,10 @@ DONE:
   for {
     select {
     case result := <-results:
-      output = process_column(result, output)
+      output = append(output, result)
     default:
       break DONE
     }
-  }
-
-  num_cols_f := float64(num_cols)
-  for i, v := range output {
-    output[i] = v / num_cols_f
   }
 
   return output
@@ -176,9 +201,12 @@ DONE:
 
 // do_average is the main entry point for doing the averaging spawning
 // all involved worker goroutines
-func Average(fileNames []string, colID int, numWorkers int) []float64 {
+//
+// NOTE: If the list of fileNames is empty we assume input from stdin
+func Statistic(fileNames []string, colID int, numWorkers int) []stat {
+
   jobs := make(chan job, numWorkers)
-  result := make(chan column, len(fileNames))
+  result := make(chan stat, len(fileNames))
   done := make(chan doneStatus, numWorkers)
 
   go add_jobs(fileNames, colID, jobs, result)
