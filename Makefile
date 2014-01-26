@@ -9,6 +9,7 @@ all:
 test:
 	go test ./average
 	go test ./statistic
+	go test ./quickselect
 
 
 bench:
