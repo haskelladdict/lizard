@@ -10,6 +10,7 @@ import (
   "flag"
   "math"
   "runtime"
+  "strings"
   "github.com/haskelladdict/lizard/average"
   "github.com/haskelladdict/lizard/statistic"
 )
@@ -18,16 +19,20 @@ import (
 
 // define variable used in command line parsing
 var averageFiles bool
+var columnID int         // id of column to act on, 0 = leftmost columns
 var fileStatistic bool
-var columnID int         // id of columne to act on, 0 = leftmost columns
 var numWorkers int
 var numThreads int
+var wantMedian bool      // also compute median when computing statistic via -s
+                         // NOTE: median is O(n) on average and requires
+                         // memory the size of the data array
 
 
 func init() {
   flag.BoolVar(&averageFiles, "a", false, "average columns")
   flag.BoolVar(&fileStatistic, "s", false, "compute file statistics")
   flag.IntVar(&columnID, "c", 0, "column id (default : 0)")
+  flag.BoolVar(&wantMedian, "m", false, "compute median with -s (default: false)")
   flag.IntVar(&numWorkers, "w", 4, "number of worker goroutines (default: 4)")
   flag.IntVar(&numThreads, "t", runtime.NumCPU(),
     "maximum number of threads (default: number of CPUs")
@@ -65,10 +70,16 @@ func main() {
       inputFiles = append(inputFiles, "")
     }
 
-    stats := statistic.Statistic(inputFiles, columnID, numWorkers)
+    stats := statistic.Statistic(inputFiles, columnID, wantMedian, numWorkers)
     for _, stat := range stats {
-      fmt.Printf("%s : %8.8f +/- %8.8f  (mean +/- std)\n", stat.Name,
-        stat.Mean, math.Sqrt(stat.Variance))
+      if wantMedian {
+        fmt.Printf("%s : %8.8f +/- %8.8f  (mean +/- std)\n%s   %8.8f (median) \n",
+          stat.Name, stat.Mean, math.Sqrt(stat.Variance), 
+          strings.Repeat(" ", len(stat.Name)), stat.Median)
+      } else {
+        fmt.Printf("%s : %8.8f +/- %8.8f  (mean +/- std)\n", stat.Name,
+          stat.Mean, math.Sqrt(stat.Variance))
+      }
     }
   }
 }

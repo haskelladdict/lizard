@@ -9,11 +9,11 @@ package statistic
 
 import (
   "bufio"
-//  "fmt"
   "log"
   "os"
   "strconv"
   "strings"
+  "github.com/haskelladdict/lizard/quickselect"
 )
 
 
@@ -28,6 +28,7 @@ type stat struct {
   Name string
   Mean float64
   Variance float64
+  Median float64
 }
 
 
@@ -36,6 +37,7 @@ type stat struct {
 type job struct {
   fileName string
   colID int
+  wantMedian bool     // expensive - don't do by default
   results chan<- stat
 }
 
@@ -51,10 +53,10 @@ type doneStatus struct {
 
 
 // add_jobs adds all parsing jobs to the work queue (one per data file)
-func add_jobs(fileNames []string, colID int, jobs chan<- job,
+func add_jobs(fileNames []string, colID int, wantMedian bool, jobs chan<- job,
   result chan<- stat) {
   for _, name := range fileNames {
-    jobs <- job{name, colID, result}
+    jobs <- job{name, colID, wantMedian, result}
   }
   close(jobs)
 }
@@ -113,31 +115,39 @@ func (j job) run() bool {
   }
   defer file.Close()
 
-  mean, variance, err := compute_mean_variance(file, j.colID)
+  mean, variance, median, err := compute_statistic(file, j.colID, j.wantMedian)
   if err != nil {
     log.Printf("Warning: Failed to parse file %s. Ignoring.\n", j.fileName)
     return false
   }
 
-  j.results <- stat{j.fileName, mean, variance}
+  j.results <- stat{j.fileName, mean, variance, median}
   return true
 }
 
 
 
-// compute_mean_variance computes the mean and variance of column colID
-// of a plain text column oriented data file
-func compute_mean_variance(file *os.File, colID int) (float64, float64, error) {
+// compute_statistic computes the mean, variance and median (id requested)
+// of column colID of a plain text column oriented data file
+func compute_statistic(file *os.File, colID int, wantMedian bool) (float64, float64, float64, error) {
 
   var count int
   var m_old, s_old, m, s float64
+  var data []float64
+  if wantMedian {
+    data = make([]float64, 0)
+  }
 
   scanner := bufio.NewScanner(file)
   for scanner.Scan() {
     elems := strings.TrimSpace(strings.Fields(scanner.Text())[colID])
     col, err := strconv.ParseFloat(elems, 64)
     if err != nil {
-      return 0.0, 0.0, err
+      return 0.0, 0.0, 0.0, err
+    }
+
+    if wantMedian {
+      data = append(data, col)
     }
 
     count++
@@ -152,7 +162,12 @@ func compute_mean_variance(file *os.File, colID int) (float64, float64, error) {
     }
   }
 
-  return m, s/float64(count-1), nil
+  var median float64
+  if wantMedian {
+    median = Median(data)
+  }
+
+  return m, s/float64(count-1), median, nil
 }
 
 
@@ -211,17 +226,39 @@ DONE:
 
 
 
+// median computes the median of a list of float64 values using
+// quickselect. 
+//
+// NOTE: This operation is only O(n) but requires to keep the 
+//       complete dataset in memory which may be prohibitive
+//       for large datasets.
+func Median(data []float64) float64 {
+
+  n := len(data)
+  if  (n % 2) == 0 {
+    return (quickselect.Quickselect(data, n/2-1) + quickselect.Quickselect(data, n/2))/2.0
+  } else {
+    return quickselect.Quickselect(data, n/2)
+  }
+}
+
+
+
 // do_average is the main entry point for doing the averaging spawning
 // all involved worker goroutines
 //
 // NOTE: If the list of fileNames is empty we assume input from stdin
-func Statistic(fileNames []string, colID int, numWorkers int) []stat {
+//
+// NOTE: The computation of the median is segregated out since it in
+//       contrast to the mean/std it requires us to store the complete 
+//       content of the data file in memory which may be prohibitive
+func Statistic(fileNames []string, colID int, wantMedian bool, numWorkers int) []stat {
 
   jobs := make(chan job, numWorkers)
   result := make(chan stat, len(fileNames))
   done := make(chan doneStatus, numWorkers)
 
-  go add_jobs(fileNames, colID, jobs, result)
+  go add_jobs(fileNames, colID, wantMedian, jobs, result)
   for i := 0; i < numWorkers; i++ {
     go start_jobs(done, jobs)
   }

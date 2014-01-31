@@ -16,7 +16,7 @@ import (
 // quicksort is the top level driver for quicksort. Its role
 // currently mainly is to initialize the random number generator
 // before calling the main quicksort routine.
-func quicksort(array []float64) {
+func Quicksort(array []float64) {
   r := rand.New(rand.NewSource(time.Now().UnixNano()))
   quicksort_h(array, 0, len(array), r)
 }
@@ -26,7 +26,7 @@ func quicksort(array []float64) {
 // quickselect selects the kth smallest item from array using 
 // a one sided randomized quicksort routine
 // NOTE: k has to be a valid index within slice array
-func quickselect(array []float64, k int) float64 {
+func Quickselect(array []float64, k int) float64 {
   r := rand.New(rand.NewSource(time.Now().UnixNano()))
   return quickselect_h(array, k, 0, len(array), r)
 }

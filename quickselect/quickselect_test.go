@@ -24,28 +24,28 @@ func Test_Average_1(t *testing.T) {
   data_file_1 := "test_files/test_data_1.txt"
   items, err := read_file_into_slice(data_file_1)
   if err != nil {
-    t.Error("quickcheck test 1 failed - error parsing %v", data_file_1)
+    t.Error("quickselect test 1 failed - error parsing %v", data_file_1)
   }
 
   for k := 0; k < 100; k++ {
-    result_1 := quickselect(items, 5)
+    result_1 := Quickselect(items, 5)
     if !float_equal(result_1, 6) {
-      t.Errorf("quickcheck test 1 failed - expected 6 got %v\n", result_1)
+      t.Errorf("quickselect test 1 failed - expected 6 got %v\n", result_1)
     }
 
-    result_2 := quickselect(items, 6)
+    result_2 := Quickselect(items, 6)
     if !float_equal(result_2, 7) {
-      t.Errorf("quickcheck test 1 failed - expected 6 got %v\n", result_2)
+      t.Errorf("quickselect test 1 failed - expected 6 got %v\n", result_2)
     }
 
-    result_3 := quickselect(items, 0)
+    result_3 := Quickselect(items, 0)
     if !float_equal(result_3, 1) {
-      t.Errorf("quickcheck test 1 failed - expected 6 got %v\n", result_3)
+      t.Errorf("quickselect test 1 failed - expected 6 got %v\n", result_3)
     }
 
-    result_4 := quickselect(items, 9)
+    result_4 := Quickselect(items, 9)
     if !float_equal(result_4, 10) {
-      t.Errorf("quickcheck test 1 failed - expected 6 got %v\n", result_4)
+      t.Errorf("quickselect test 1 failed - expected 6 got %v\n", result_4)
     }
   }
 }
@@ -56,9 +56,9 @@ func Test_Average_2(t *testing.T) {
   items := []float64{77}
 
   for k := 0; k < 100; k++ {
-    result_1 := quickselect(items, 2)
+    result_1 := Quickselect(items, 2)
     if !float_equal(result_1, 77) {
-      t.Errorf("quickcheck test 2 failed - expected 77 got %v\n", result_1)
+      t.Errorf("quickselect test 2 failed - expected 77 got %v\n", result_1)
     }
   }
 }
